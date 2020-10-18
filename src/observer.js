@@ -36,6 +36,7 @@ export default class Observer {
     this.holder = holder;
     this.observer = null;
     this.debounceTimer = 200;
+    this.disabled = false;
     this.mutationDebouncer = this.debounce(() => {
       registerChange();
     }, this.debounceTimer);

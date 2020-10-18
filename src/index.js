@@ -36,6 +36,10 @@ export default class Undo {
       this.editor.configuration.holder,
     );
     
+    /**
+   * Allows to temporary disable mutations handling
+   */
+
     this.disable = function () {
       observer.disable();
     }
@@ -91,13 +95,20 @@ export default class Undo {
    */
   registerChange() {
     if (this.editor && this.editor.save && this.shouldSaveHistory) {
-      Undo.disable();
-      this.editor.save().then((savedData) => {
+      this.disable();
+      this.editor.save(true).then((savedData) => {
+        this.shouldSaveHistory = false;
         if (this.editorDidUpdate(savedData.blocks)) this.save(savedData.blocks);
-        Undo.enable();
+        console.log("REGISTER CHANGES",this.stack);
+        this.enable();
+        this.shouldSaveHistory = true;
+      });
+      this.editor.save().catch((reason)=>{
+        this.enable();
+        this.shouldSaveHistory = true;
       });
     }
-    this.shouldSaveHistory = true;
+   
   }
 
   /**
