@@ -35,15 +35,6 @@ export default class Undo {
       () => this.registerChange(),
       this.editor.configuration.holder,
     );
-    
-    this.disable = function () {
-      observer.disable();
-    }
-    
-    this.enable = function () {
-      observer.enable();
-    }
-    
     observer.setMutationObserver();
     this.setEventListeners();
     this.initialItem = null;
@@ -69,32 +60,26 @@ export default class Undo {
    */
   initialize(initialItem) {
     const initialData = 'blocks' in initialItem ? initialItem.blocks : initialItem;
-    const initialIndex = initialData.length - 1;
-    const firstElement = { index: initialIndex, state: initialData };
-    this.stack[0] = firstElement;
-    this.initialItem = firstElement;
+    this.stack[0] = initialData;
+    this.initialItem = initialData;
   }
 
   /**
    * Clears the history stack.
    */
   clear() {
-    this.stack = this.initialItem
-      ? [this.initialItem]
-      : [{ index: 0, state: [] }];
+    this.stack = [this.initialItem];
     this.position = 0;
     this.onUpdate();
   }
-
+  
   /**
    * Registers the data returned by API's save method into the history stack.
    */
   registerChange() {
-    if (this.editor && this.editor.save && this.shouldSaveHistory) {
-      Undo.disable();
-      this.editor.save().then((savedData) => {
+    if (this.shouldSaveHistory) {
+      this.editor.save(true).then((savedData) => {
         if (this.editorDidUpdate(savedData.blocks)) this.save(savedData.blocks);
-        Undo.enable();
       });
     }
     this.shouldSaveHistory = true;
@@ -107,41 +92,40 @@ export default class Undo {
    * @returns {Boolean}
    */
   editorDidUpdate(newData) {
-    const { state } = this.stack[this.position];
-    if (newData.length !== state.length) return true;
+    if (!this.count() && !this.initialItem) return true;
 
-    return JSON.stringify(state) !== JSON.stringify(newData);
+    const currentData = this.stack[this.position];
+    if (newData.length !== currentData.length) return true;
+
+    return JSON.stringify(currentData) !== JSON.stringify(newData);
   }
 
   /**
    * Adds the saved data in the history stack and updates current position.
    */
-  save(state) {
+  save(current) {
     if (this.position >= this.maxLength) {
       this.truncate(this.stack, this.maxLength);
     }
     this.position = Math.min(this.position, this.stack.length - 1);
 
     this.stack = this.stack.slice(0, this.position + 1);
-
-    const index = this.editor.blocks.getCurrentBlockIndex();
-    this.stack.push({ index, state });
+    this.stack.push(current);
     this.position += 1;
     this.onUpdate();
   }
 
+
+  
   /**
    * Decreases the current position and renders the data in the editor.
    */
   undo() {
     if (this.canUndo()) {
       this.shouldSaveHistory = false;
-      const { index, state } = this.stack[(this.position -= 1)];
+      var item = this.stack[(this.position -= 1)];
       this.onUpdate();
-
-      this.editor.blocks
-        .render({ blocks: state })
-        .then(() => this.editor.caret.setToBlock(index, 'end'));
+      this.editor.blocks.render({ blocks: item });
     }
   }
 
@@ -151,12 +135,10 @@ export default class Undo {
   redo() {
     if (this.canRedo()) {
       this.shouldSaveHistory = false;
-      const { index, state } = this.stack[(this.position += 1)];
+      const item = this.stack[(this.position += 1)];
       this.onUpdate();
 
-      this.editor.blocks
-        .render({ blocks: state })
-        .then(() => this.editor.caret.setToBlock(index, 'end'));
+      this.editor.blocks.render({ blocks: item });
     }
   }
 
@@ -192,27 +174,18 @@ export default class Undo {
    */
   setEventListeners() {
     const buttonKey = /(Mac)/i.test(navigator.platform) ? 'metaKey' : 'ctrlKey';
-    const handleUndo = (e) => {
+    document.addEventListener('keydown', (e) => {
       if (e[buttonKey] && e.key === 'z') {
         e.preventDefault();
         this.undo();
       }
-    };
+    });
 
-    const handleRedo = (e) => {
+    document.addEventListener('keydown', (e) => {
       if (e[buttonKey] && e.key === 'y') {
         e.preventDefault();
         this.redo();
       }
-    };
-
-    const handleDestroy = () => {
-      document.removeEventListener('keydown', handleUndo);
-      document.removeEventListener('keydown', handleRedo);
-    };
-
-    document.addEventListener('keydown', handleUndo);
-    document.addEventListener('keydown', handleRedo);
-    document.addEventListener('destroy', handleDestroy);
+    });
   }
 }

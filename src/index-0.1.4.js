@@ -35,15 +35,6 @@ export default class Undo {
       () => this.registerChange(),
       this.editor.configuration.holder,
     );
-    
-    this.disable = function () {
-      observer.disable();
-    }
-    
-    this.enable = function () {
-      observer.enable();
-    }
-    
     observer.setMutationObserver();
     this.setEventListeners();
     this.initialItem = null;
@@ -91,10 +82,8 @@ export default class Undo {
    */
   registerChange() {
     if (this.editor && this.editor.save && this.shouldSaveHistory) {
-      Undo.disable();
       this.editor.save().then((savedData) => {
         if (this.editorDidUpdate(savedData.blocks)) this.save(savedData.blocks);
-        Undo.enable();
       });
     }
     this.shouldSaveHistory = true;

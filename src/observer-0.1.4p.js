@@ -61,38 +61,11 @@ export default class Observer {
     this.observer.observe(target, observerOptions);
   }
 
-    /**
-   * Allows to disable observer,
-   * for example when Editor wants to stealthy mutate DOM
-   */
-  disable() {
-    this.disabled = true;
-  }
-
-  /**
-   * Enables mutation handling
-   * Should be called after .disable()
-   */
-  enable() {
-    this.disabled = false;
-  }
-
-  
-  
   /**
    * Handles the mutations and checks if a new mutation has been produced.
    * @param {Object} mutationList The registered mutations
    */
   mutationHandler(mutationList) {
-    
-    /**
-     * Skip mutations in stealth mode
-     */
-    if (this.disabled) {
-      return;
-    }
-    
-    
     let contentMutated = false;
 
      // from editor.js
