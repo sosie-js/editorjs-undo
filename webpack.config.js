@@ -52,7 +52,7 @@ module.exports = (env, argv) => {
       }),
 
       new webpack.BannerPlugin({
-        banner: `Undo/Redo feature for Editor.js\n\n@version ${VERSION}\n\n@package https://github.com/editor-js/header\n@licence MIT\n@author CodeX <https://codex.so>`,
+        banner: `Undo/Redo feature for Editor.js\n\n@version ${VERSION}\n\n@package https://github.com/kommitters/editorjs-undo\n@licence MIT\n@author kommit <info@kommit.co>`,
       }),
      ],
     output: {
