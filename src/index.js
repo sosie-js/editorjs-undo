@@ -20,10 +20,11 @@ export default class Undo {
       maxLength: 30,
       onUpdate() {},
     };
-
+  
     this.editor = options.editor;
     this.shouldSaveHistory = true;
-
+    this.bigBrotherMode = options.bigBrotherMode || false;
+    
     this.maxLength = options.maxLength
       ? options.maxLength
       : defaultOptions.maxLength;
@@ -96,20 +97,51 @@ export default class Undo {
   registerChange() {
     if (this.editor && this.editor.save && this.shouldSaveHistory) {
       this.disable();
-      this.editor.save(true).then((savedData) => {
-        this.shouldSaveHistory = false;
+      this.editor.save().then((savedData) => {
         if (this.editorDidUpdate(savedData.blocks)) this.save(savedData.blocks);
-        console.log("REGISTER CHANGES",this.stack);
         this.enable();
-        this.shouldSaveHistory = true;
       });
       this.editor.save().catch((reason)=>{
         this.enable();
-        this.shouldSaveHistory = true;
       });
     }
-   
+   this.shouldSaveHistory = true;
   }
+
+  /**
+   * Display changes between two states with colors in github like fashion
+   */ 
+  viewChanges(state, newState, console) {
+    
+     if( JSON.stringify(state) !== JSON.stringify(newState)) {
+       
+        var html=[]; 
+        var strWindowFeatures = "location=no,height=570,width=800,scrollbars=yes,status=yes";
+       
+          html.push('<style>\n\tins { background-color: #cdffd8; }\n\tdel { background-color: #ffdce0; }\n</style>')
+          
+          var diffHTML=window.diffString( JSON.stringify(state, null, 4 ) , JSON.stringify(newState, null, 4 ));
+          html.push(diffHTML);
+        
+          html.push("<script> var del=document.querySelectorAll('del')[0];\ndel.scrollIntoView(true); </script>");
+          
+          if(notifier) {
+             notifier.show({
+              type:'console',
+              id:'test',
+              layout: 'right',
+              time: 4000,
+              title:'View Changes  (' + diffHTML.length + ') from '+(console || 'console'),
+              message:html.join('\n'),
+            })
+          } else {
+            var childWindow= window.open('', "_blank", strWindowFeatures);
+            childWindow.document.write(html.join('\n'));
+            childWindow.focus();
+          }
+           
+      }
+  }  
 
   /**
    * Checks if the saved data has to be added to the history stack.
@@ -119,8 +151,9 @@ export default class Undo {
    */
   editorDidUpdate(newData) {
     const { state } = this.stack[this.position];
+    if(this.bigBrotherMode) this.viewChanges(state, newData,'Undo.editorDidUpdate');
     if (newData.length !== state.length) return true;
-
+    
     return JSON.stringify(state) !== JSON.stringify(newData);
   }
 
@@ -148,6 +181,7 @@ export default class Undo {
     if (this.canUndo()) {
       this.shouldSaveHistory = false;
       const { index, state } = this.stack[(this.position -= 1)];
+      if(this.bigBrotherMode) this.viewChanges(this.stack[this.position+1].state, state,'Undo.undo');
       this.onUpdate();
 
       this.editor.blocks
@@ -163,6 +197,7 @@ export default class Undo {
     if (this.canRedo()) {
       this.shouldSaveHistory = false;
       const { index, state } = this.stack[(this.position += 1)];
+      if(this.bigBrotherMode) this.viewChanges(this.stack[this.position-1].state, state,'Undo.redo');
       this.onUpdate();
 
       this.editor.blocks

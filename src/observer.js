@@ -233,7 +233,7 @@ export default class Observer {
                 }
             });
             //console.log('Blockschanged',changed);
-            document.dispatchEvent(event)
+            document.dispatchEvent(event) //!NOTE this event is handled in our case by the block-plugin in thoughout listeners installed in initBlocksPositionListeners
         }
         
         this.mutationDebouncer();
